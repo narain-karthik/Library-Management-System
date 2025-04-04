@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #333;
+            color: white;
+            padding: 20px;
+            height: 100vh;
+        }
+        .sidebar h2 {
+            text-align: center;
+        }
+        .sidebar ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .sidebar ul li {
+            padding: 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #444;
+            text-align: center;
+        }
+        .sidebar ul li a {
+            text-decoration: none;
+            color: white;
+            display: block;
+        }
+        .sidebar ul li:hover, .sidebar ul li.active {
+            background-color: #6F2DA8;
+        }
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            background-color: white;
+            text-align: center;
+            overflow-y: auto;
+        }
+        .main-content h1 {
+            color: #6F2DA8;
+            margin-bottom: 20px;
+        }
+        .logo {
+            max-width: 80%;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        .alert {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        table {
+            width: 90%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #6F2DA8;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .btn {
+            background-color: #6F2DA8;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 14px;
+            margin: 10px;
+        }
+        .btn:hover {
+            background-color: #5A1E86;
+        }
+        h2 {
+            color: #6F2DA8;
+            margin-top: 30px;
+        }
+        select {
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Admin Dashboard</h2>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('new_book') }}">New Book</a></li>
+            <li><a href="{{ url_for('new_student') }}">New Student</a></li>
+            <li><a href="{{ url_for('new_staff') }}">New Staff</a></li>
+            <li><a href="{{ url_for('issue_book') }}">Issue Book</a></li>
+            <li><a href="{{ url_for('staff_issue_book') }}">Staff Issue Book</a></li>
+            <li><a href="{{ url_for('return_book') }}">Return Book</a></li>
+            <li><a href="{{ url_for('staff_return_book') }}">Staff Return Book</a></li>
+            <li><a href="{{ url_for('edit_book') }}">Edit Book Details</a></li>
+            <li><a href="{{ url_for('edit_student') }}">Edit Student Details</a></li>
+            <li><a href="{{ url_for('edit_staff') }}">Edit Staff Details</a></li>
+            <li class="active"><a href="{{ url_for('view_details') }}">View Details</a></li>
+            <li><a href="{{ url_for('logout') }}" style="color: red;">Logout</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <img src="{{ url_for('static', filename='Logo.jpg') }}" alt="College Logo" class="logo">
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Report Selection -->
+        <form method="GET" action="{{ url_for('view_details') }}">
+            <label for="report_type">Select Report:</label>
+            <select name="report_type" id="report_type" onchange="this.form.submit()">
+                <option value="student_details" {% if report_type == 'student_details' %}selected{% endif %}>Student Details</option>
+                <option value="student_issued" {% if report_type == 'student_issued' %}selected{% endif %}>Student Issued Books</option>
+                <option value="student_returned" {% if report_type == 'student_returned' %}selected{% endif %}>Student Returned Books</option>
+                <option value="staff_details" {% if report_type == 'staff_details' %}selected{% endif %}>Staff Details</option>
+                <option value="staff_issued" {% if report_type == 'staff_issued' %}selected{% endif %}>Staff Issued Books</option>
+                <option value="staff_returned" {% if report_type == 'staff_returned' %}selected{% endif %}>Staff Returned Books</option>
+            </select>
+        </form>
+
+        <!-- Download Button (only for selected report) -->
+        <form action="{{ url_for('view_details') }}" method="POST">
+            <input type="hidden" name="report_type" value="{{ report_type }}">
+            <button type="submit" name="action" value="download" class="btn">Download Selected Report as PDF</button>
+        </form>
+
+        <!-- Conditionally Display Selected Report -->
+        {% if report_type == 'student_details' %}
+            <h2>Student Details</h2>
+            {% if students %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Name</th>
+                            <th>Batch</th>
+                            <th>Course</th>
+                            <th>Gender</th>
+                            <th>Email</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                            <tr>
+                                <td>{{ student[0] }}</td>
+                                <td>{{ student[1] }}</td>
+                                <td>{{ student[2] }}</td>
+                                <td>{{ student[3] }}</td>
+                                <td>{{ student[4] }}</td>
+                                <td>{{ student[5] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No students found.</p>
+            {% endif %}
+
+        {% elif report_type == 'student_issued' %}
+            <h2>Student Issued Books</h2>
+            {% if student_issued %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Issue ID</th>
+                            <th>Student ID</th>
+                            <th>Book ID</th>
+                            <th>Issue Date</th>
+                            <th>Return Date</th>
+                            <th>Due Date</th>
+                            <th>Renew Count</th>
+                            <th>Fine (₹)</th>
+                            <th>Student Name</th>
+                            <th>Book Name</th>
+                            <th>Edition</th>
+                            <th>Publishing Year</th>
+                            <th>Purchase Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for issue in student_issued %}
+                            <tr>
+                                <td>{{ issue[0] }}</td>
+                                <td>{{ issue[1] }}</td>
+                                <td>{{ issue[2] }}</td>
+                                <td>{{ issue[3] }}</td>
+                                <td>{{ issue[4] or 'Not Returned' }}</td>
+                                <td>{{ issue[5] or 'N/A' }}</td>
+                                <td>{{ issue[6] or 0 }}</td>
+                                <td>{{ issue[7] | float | round(2) }}</td>
+                                <td>{{ issue[8] }}</td>
+                                <td>{{ issue[9] }}</td>
+                                <td>{{ issue[10] or 'N/A' }}</td>
+                                <td>{{ issue[11] or 'N/A' }}</td>
+                                <td>{{ issue[12] or 'N/A' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No books issued to students.</p>
+            {% endif %}
+
+        {% elif report_type == 'student_returned' %}
+            <h2>Student Returned Books</h2>
+            {% if student_returned %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Return ID</th>
+                            <th>Issue ID</th>
+                            <th>Student ID</th>
+                            <th>Book ID</th>
+                            <th>Issue Date</th>
+                            <th>Return Date</th>
+                            <th>Due Date</th>
+                            <th>Renew Count</th>
+                            <th>Fine (₹)</th>
+                            <th>Student Name</th>
+                            <th>Book Name</th>
+                            <th>Edition</th>
+                            <th>Publishing Year</th>
+                            <th>Purchase Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for return in student_returned %}
+                            <tr>
+                                <td>{{ return[0] }}</td>
+                                <td>{{ return[1] }}</td>
+                                <td>{{ return[2] }}</td>
+                                <td>{{ return[3] }}</td>
+                                <td>{{ return[4] }}</td>
+                                <td>{{ return[5] }}</td>
+                                <td>{{ return[6] or 'N/A' }}</td>
+                                <td>{{ return[7] or 0 }}</td>
+                                <td>{{ return[8] | float | round(2) }}</td>
+                                <td>{{ return[9] }}</td>
+                                <td>{{ return[10] }}</td>
+                                <td>{{ return[11] or 'N/A' }}</td>
+                                <td>{{ return[12] or 'N/A' }}</td>
+                                <td>{{ return[13] or 'N/A' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No books returned by students.</p>
+            {% endif %}
+
+        {% elif report_type == 'staff_details' %}
+            <h2>Staff Details</h2>
+            {% if staff %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Staff Register</th>
+                            <th>Name</th>
+                            <th>Designation</th>
+                            <th>Department</th>
+                            <th>Course</th>
+                            <th>Gender</th>
+                            <th>Email</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in staff %}
+                            <tr>
+                                <td>{{ member[0] }}</td>
+                                <td>{{ member[1] }}</td>
+                                <td>{{ member[2] }}</td>
+                                <td>{{ member[3] }}</td>
+                                <td>{{ member[4] }}</td>
+                                <td>{{ member[5] }}</td>
+                                <td>{{ member[6] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No staff found.</p>
+            {% endif %}
+
+        {% elif report_type == 'staff_issued' %}
+            <h2>Staff Issued Books</h2>
+            {% if staff_issued %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Issue ID</th>
+                            <th>Staff Register</th>
+                            <th>Book ID</th>
+                            <th>Issue Date</th>
+                            <th>Return Date</th>
+                            <th>Due Date</th>
+                            <th>Renew Count</th>
+                            <th>Fine (₹)</th>
+                            <th>Staff Name</th>
+                            <th>Book Name</th>
+                            <th>Edition</th>
+                            <th>Publishing Year</th>
+                            <th>Purchase Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for issue in staff_issued %}
+                            <tr>
+                                <td>{{ issue[0] }}</td>
+                                <td>{{ issue[1] }}</td>
+                                <td>{{ issue[2] }}</td>
+                                <td>{{ issue[3] }}</td>
+                                <td>{{ issue[4] or 'Not Returned' }}</td>
+                                <td>{{ issue[5] or 'N/A' }}</td>
+                                <td>{{ issue[6] or 0 }}</td>
+                                <td>{{ issue[7] | float | round(2) }}</td>
+                                <td>{{ issue[8] }}</td>
+                                <td>{{ issue[9] }}</td>
+                                <td>{{ issue[10] or 'N/A' }}</td>
+                                <td>{{ issue[11] or 'N/A' }}</td>
+                                <td>{{ issue[12] or 'N/A' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No books issued to staff.</p>
+            {% endif %}
+
+        {% elif report_type == 'staff_returned' %}
+            <h2>Staff Returned Books</h2>
+            {% if staff_returned %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Return ID</th>
+                            <th>Issue ID</th>
+                            <th>Staff Register</th>
+                            <th>Book ID</th>
+                            <th>Issue Date</th>
+                            <th>Return Date</th>
+                            <th>Due Date</th>
+                            <th>Renew Count</th>
+                            <th>Fine (₹)</th>
+                            <th>Staff Name</th>
+                            <th>Book Name</th>
+                            <th>Edition</th>
+                            <th>Publishing Year</th>
+                            <th>Purchase Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for return in staff_returned %}
+                            <tr>
+                                <td>{{ return[0] }}</td>
+                                <td>{{ return[1] }}</td>
+                                <td>{{ return[2] }}</td>
+                                <td>{{ return[3] }}</td>
+                                <td>{{ return[4] }}</td>
+                                <td>{{ return[5] }}</td>
+                                <td>{{ return[6] or 'N/A' }}</td>
+                                <td>{{ return[7] or 0 }}</td>
+                                <td>{{ return[8] | float | round(2) }}</td>
+                                <td>{{ return[9] }}</td>
+                                <td>{{ return[10] }}</td>
+                                <td>{{ return[11] or 'N/A' }}</td>
+                                <td>{{ return[12] or 'N/A' }}</td>
+                                <td>{{ return[13] or 'N/A' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No books returned by staff.</p>
+            {% endif %}
+        {% endif %}
+    </div>
+</body>
+</html>
